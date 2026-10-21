@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     ADMIN_ID: int
     
     PRIMARY_MODEL: str = "gemini-3.5-flash"
-    FALLBACK_MODEL: str = "gemini-3.1-flash-lite"
+    FALLBACK_MODEL: str = "gemini-3.5-flash-lite"
     
     DB_PATH: str = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "database.db"))
     TEMP_DIR: str = os.getenv("TEMP_DIR", os.path.join(os.path.dirname(__file__), "temp"))

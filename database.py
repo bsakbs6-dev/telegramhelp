@@ -23,9 +23,16 @@ async def init_db():
                 full_name TEXT,
                 is_admin BOOLEAN DEFAULT 0,
                 is_allowed BOOLEAN DEFAULT 1,
+                ocr_mode TEXT DEFAULT 'structured',
                 registered_at TEXT
             )
         """)
+        
+        # Upgrade schema if column ocr_mode doesn't exist yet
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN ocr_mode TEXT DEFAULT 'structured'")
+        except Exception:
+            pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS invite_keys (
                 key TEXT PRIMARY KEY,
@@ -66,6 +73,21 @@ async def is_user_authorized(user_id: int) -> bool:
             if row and row[0] == 1:
                 return True
     return False
+
+async def get_user_mode(user_id: int) -> str:
+    """Returns 'structured' or 'exact'."""
+    async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with db.execute("SELECT ocr_mode FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if row and row[0]:
+                return row[0]
+    return "structured"
+
+async def set_user_mode(user_id: int, mode: str):
+    """Sets mode: 'structured' or 'exact'."""
+    async with aiosqlite.connect(settings.DB_PATH) as db:
+        await db.execute("UPDATE users SET ocr_mode = ? WHERE user_id = ?", (mode, user_id))
+        await db.commit()
 
 async def create_invite_key(created_by: int) -> str:
     key = generate_random_key()
