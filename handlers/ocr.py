@@ -1,4 +1,5 @@
 import os
+import html
 import asyncio
 import logging
 from typing import Dict, List
@@ -213,7 +214,12 @@ async def cb_process_format(callback: CallbackQuery, bot: Bot):
             chunks = chunk_text(markdown_result)
             for i, chunk in enumerate(chunks, start=1):
                 header = f"📝 <b>Часть {i}/{len(chunks)}:</b>\n\n" if len(chunks) > 1 else ""
-                await callback.message.answer(f"{header}{chunk}")
+                # Send text safely: plain text (parse_mode=None) prevents crashes on math symbols <>, tags, or equations
+                try:
+                    await callback.message.answer(f"{header}{chunk}", parse_mode="HTML")
+                except Exception:
+                    plain_header = f"📝 Часть {i}/{len(chunks)}:\n\n" if len(chunks) > 1 else ""
+                    await callback.message.answer(f"{plain_header}{chunk}", parse_mode=None)
                 await asyncio.sleep(0.3)
 
         await database.record_usage(user_id=user_id, photos_count=count, output_format=chosen_format)
@@ -225,8 +231,9 @@ async def cb_process_format(callback: CallbackQuery, bot: Bot):
 
     except Exception as e:
         logger.error(f"Error during OCR processing: {e}", exc_info=True)
+        safe_error = html.escape(str(e))
         await callback.message.answer(
-            f"❌ <b>Произошла ошибка при обработке:</b>\n<code>{e}</code>\n\n"
+            f"❌ <b>Произошла ошибка при обработке:</b>\n<code>{safe_error}</code>\n\n"
             "Попробуйте отправить фото повторно.",
             parse_mode="HTML"
         )
